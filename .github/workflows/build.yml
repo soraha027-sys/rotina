@@ -1,31 +1,51 @@
 name: Build APK
+
 on:
   push:
   workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Descompactar projeto
         run: |
           if [ -f projeto.zip ]; then unzip -o -q projeto.zip; fi
+
+      - name: Baixar fontes (pro app funcionar offline)
+        run: |
+          F=app/src/main/assets/www/fonts
+          mkdir -p $F
+          G=https://github.com/google/fonts/raw/main/ofl
+          curl -fsSL -o $F/Rubik.ttf "$G/rubik/Rubik%5Bwght%5D.ttf" || true
+          curl -fsSL -o $F/Antonio.ttf "$G/antonio/Antonio%5Bwght%5D.ttf" || true
+          curl -fsSL -o $F/SpaceMono-Regular.ttf "$G/spacemono/SpaceMono-Regular.ttf" || true
+          curl -fsSL -o $F/SpaceMono-Bold.ttf "$G/spacemono/SpaceMono-Bold.ttf" || true
+          ls -la $F
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+
       - name: Compilar APK debug
         run: gradle assembleDebug --stacktrace
+
       - uses: actions/upload-artifact@v4
         with:
           name: rotina-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-      - name: Publicar APK
+
+      - name: Publicar APK para download
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
